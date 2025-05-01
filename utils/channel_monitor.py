@@ -1,3 +1,4 @@
+import os
 import re
 
 from telethon import TelegramClient, events
@@ -22,6 +23,7 @@ class ChannelMonitor:
     async def initialize(self, api_id, api_hash):
         self.api_id = api_id
         self.api_hash = api_hash
+        os.makedirs("sessions", exist_ok=True)
         self.client = TelegramClient("sessions/user_session", api_id, api_hash)
 
         # Start the client - will prompt for phone/code if needed
