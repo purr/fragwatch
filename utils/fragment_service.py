@@ -1,3 +1,4 @@
+import asyncio
 from typing import Tuple, Optional
 
 import aiohttp
@@ -145,14 +146,26 @@ async def check_beneficiary_address(identifier: str) -> Tuple[bool, Optional[str
             logger.info(f"Fetching DNS info for username from {dns_url}")
 
             async with aiohttp.ClientSession() as session:
+                # First attempt
                 async with session.get(dns_url) as response:
                     if response.status != 200:
                         logger.warning(
-                            f"Failed to get DNS info from TONAPI: {response.status}"
+                            f"Failed to get DNS info from TONAPI: {response.status}, waiting 20 seconds to retry"
                         )
-                        return False, None
+                        # Wait 20 seconds before retrying
+                        await asyncio.sleep(20)
 
-                    dns_data = await response.json()
+                        # Second attempt
+                        async with session.get(dns_url) as retry_response:
+                            if retry_response.status != 200:
+                                logger.warning(
+                                    f"Retry failed to get DNS info from TONAPI: {retry_response.status}, giving up"
+                                )
+                                return False, None
+
+                            dns_data = await retry_response.json()
+                    else:
+                        dns_data = await response.json()
 
                     # Extract address from the response
                     if "item" in dns_data and "address" in dns_data["item"]:
